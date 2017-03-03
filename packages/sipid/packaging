@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+cp -a sipid/* "$BOSH_INSTALL_TARGET"
