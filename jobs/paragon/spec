@@ -1,0 +1,9 @@
+---
+name: paragon
+
+packages:
+- sipid
+
+templates:
+  start: bin/drain
+  stop: bin/stop
