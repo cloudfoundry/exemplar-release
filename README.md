@@ -5,6 +5,57 @@ BOSH release, with a particular focus on jobs. Not all advice here should be tak
 have made an attempt to explain the reasoning behind all recommendations so that the conscientious release author can
 adapt the recommendations to their unique circumstances.
 
+<!-- toc -->
+
+- [Order Independence](#order-independence)
+- [BOSH Job Lifecycle](#bosh-job-lifecycle)
+  * [Starting](#starting)
+    + [Pre-Start](#pre-start-docshttpsboshiodocspre-starthtml)
+    + [Monit Start](#monit-start)
+      - [Logging](#logging)
+    + [Post-Start](#post-start-docshttpsboshiodocspost-starthtml)
+    + [Post-Deploy](#post-deploy-docshttpsboshiodocspost-deployhtml)
+  * [Stopping](#stopping)
+    + [Drain](#drain-docshttpsboshiodocsdrainhtml)
+    + [Monit Stop](#monit-stop)
+- [Template Advice](#template-advice)
+  * [To ERB or not to ERB](#to-erb-or-not-to-erb)
+  * [BASH best practices](#bash-best-practices)
+- [Monit file](#monit-file)
+
+<!-- tocstop -->
+
+## Order Independence
+
+The primary goals of a BOSH job are to maximize availability, minimize the need for manual operation, and contribute
+to quick deployments. To accomplish this, it is important to understand the BOSH deployment lifecycle and what your
+job should be doing to take advantage of it.
+
+~~A BOSH deployed job has zero control over the full deployment process so may be deployed at any time relative to other
+jobs in a deployment. BOSH operators do have some control, but a release should not depend on operators "doing the
+right thing". Not only does that add complexity to the operator's duties and add a potential source of failure, but
+job should be able to be started independently of external dependencies such as other jobs in the same deployment.~~
+
+Main goal: Process should be able to start without any dependencies (rather than quitting if a dependency is not yet
+ready), even if that means returning unhealthy health checks. Process should be able to take itself out of commission
+(e.g. return unhealthy healthchecks) while still serving traffic. Goals here are to only advertise readiness to
+accept requests when you actually are ready, and to continue to serve in-flight requests, etc. until the advertisement
+is fully stopped. Otherwise, clients will attempt to connect to you after you have died, and requests will fail.
+
+- Starting
+  - Process should come up ASAP and not depend on dependencies being up
+  - Health-check should return unhealthy until enough dependencies are up such that you can fulfill requests
+    - May wish to use post-start to wait for full health
+- Stopping
+  - If being load-balanced
+    - Drain script should instruct process to mark itself as unhealthy, which will eventually cause LB to mark as
+      unhealthy
+    - After LB stops sending traffic, some requests may still be in flight and there still may be requests in the
+      process's queue, so drain should wait for that to settle down, too
+    - Similar workflow applies to non-LB dependencies. If other components rely on you, reply unhealthy until requests
+      "stop" (how that's determined is up to the reader). Only consider your process ready to die when it is no longer
+      receiving requests.
+
 ## BOSH Job Lifecycle
 
 Every BOSH job goes through a specific lifecycle for starting and stopping. Bosh.io has a great
@@ -79,8 +130,8 @@ exec ... \
 **Note**: `syslog_forwarder` from the [syslog-release](https://github.com/cloudfoundry/syslog-release) should be
 co-located with your job so that all logs in `/var/vcap/sys/log` are forwarded appropriately (usually to loggregator).
 If your release is not using `syslog_forwarder` and still relies on `metron_agent` (from
-[loggregator](https://github.com/cloudfoundry/loggregator)) then logs must be forwarded to syslog manually using the
-`logger` and `tee` programs:
+[loggregator](https://github.com/cloudfoundry/loggregator)) for syslog forwarding<sup>1</sup> then logs must be
+forwarded to syslog manually using the `logger` and `tee` programs:
 
 ```
 exec > \
@@ -103,9 +154,8 @@ This is _ugly_ (and starts multiple processes for every line of logs). Use `sysl
 sending them to a subshell that calls `tee`. `tee` splits the output to 1) syslog via `logger` and 2) the BOSH log
 directory (but not before appending timestamps with `awk`).</sub>
 
-**TODO**: `syslog_forwarder` configures syslogs to be "government-compliant"
-  - What does that mean?
-
+1. **Note**: `metron_agent` should only be used to receive logs over UDP. Its additional syslog forwarding capabilities
+   should not be relied upon.
 
 #### Post-Start ([docs](https://bosh.io/docs/post-start.html))
 
@@ -126,15 +176,27 @@ job becoming listed as unhealthy.
 
 #### Drain ([docs](https://bosh.io/docs/drain.html))
 
-- Drain scripts are primarily for jobs that cannot be `monit stop`ed quickly (< 10 seconds? Maybe)
-- For example, anything that needs to lame-duck
-  - GCP: Can CPI unregister gorouter from LB?
-  - Behind gorouter: Are we sending "forget me" to the router?
-- Have a blocking way to tell your process to clean-up (e.g. an endpoint)
-  - If you don't want to block, your script should wait-poll. Use a non-BASH language for this.
-  - Drain script can run forever, so you may wish to place your own upper-bound
-- When done cleaning up, exit and print 0 ("wait after draining" value)
-  - If draining fails, exit non-zero
+Drain scripts are optional hooks into the BOSH job lifecyle that are run before stopping the job via Monit. They are
+typically used for services which must perform some work before being shut down, for example flushing a request queue
+or evacuating containers from a Diego cell. As a rule of thumb, if `monit stop`ping your job could cause dropped
+connections or a lack of availability, a drain script should be used to prevent this. Most commonly, your drain script
+will send a request to a drain endpoint on your process and wait for it to return rather than implementing the drain
+behavior itself.
+
+A concrete example is the [gorouter](https://github.com/cloudfoundry/gorouter), which has a configurable `drain_wait`
+parameter. When non-zero, gorouter's drain script will instruct gorouter to report itself as unhealthy to its
+load-balancer with the intent of being removed from the balanced instance group before shutting down and rejecting
+requests. When `monit stop` is called, the router will already be receiving no connections, so will not drop
+connections when it is shut down quickly. This is the
+[lame duck](https://landing.google.com/sre/book/chapters/load-balancing-datacenter.html#robust_approach_lame_duck)
+pattern.
+
+Drain scripts have no timeout, so should take whatever time necessary to block on any draining work. One may, however,
+run the risk of writing a drain script that never finishes and blocks a deployment. A well-written drain script is
+guaranteed to finish, such as by adding your own sensible timeout around draining work (e.g. 10 minutes).
+
+When your draining process has completed, your drain script should output a "0" to STDOUT to inform BOSH that draining
+is complete.
 
 Open question: If your job needs to wait for another job to drain first, what is the best way to block on that? If you
 have any ideas, please [let us know](https://github.com/cloudfoundry/exemplar-release/pulls).
@@ -155,28 +217,6 @@ have any ideas, please [let us know](https://github.com/cloudfoundry/exemplar-re
     - Send `kill -9 $pid` to your process to kill it immediately
     - If your drain script is implemented correctly, your process may already be gone
     - Use `sipid kill`!
-
-## Order Independence
-
-Main goal: Process should be able to start without any dependencies (rather than quitting if a dependency is not yet
-ready), even if that means returning unhealthy health checks. Process should be able to take itself out of commission
-(e.g. return unhealthy healthchecks) while still serving traffic. Goals here are to only advertise readiness to
-accept requests when you actually are ready, and to continue to serve in-flight requests, etc. until the advertisement
-is fully stopped. Otherwise, clients will attempt to connect to you after you have died, and requests will fail.
-
-- Starting
-  - Process should come up ASAP and not depend on dependencies being up
-  - Health-check should return unhealthy until enough dependencies are up such that you can fulfill requests
-    - May wish to use post-start to wait for full health
-- Stopping
-  - If being load-balanced
-    - Drain script should instruct process to mark itself as unhealthy, which will eventually cause LB to mark as
-      unhealthy
-    - After LB stops sending traffic, some requests may still be in flight and there still may be requests in the
-      process's queue, so drain should wait for that to settle down, too
-    - Similar workflow applies to non-LB dependencies. If other components rely on you, reply unhealthy until requests
-      "stop" (how that's determined is up to the reader). Only consider your process ready to die when it is no longer
-      receiving requests.
 
 ## Template Advice
 
