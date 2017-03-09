@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+# If a command fails, exit immediately
+set -e
+
+LOG_DIR="/var/vcap/sys/log/paragon"
+RUN_DIR="/var/vcap/sys/run/paragon"
+PIDFILE="$RUN_DIR/web.pid"
+
+mkdir -p "$LOG_DIR" "$RUN_DIR"
+
+# If one of these directories is very large, chowning might take a
+# very long time. Consider only chowning if dir did not yet exist
+# in the previous step
+chown -R vcap:vcap "$LOG_DIR" "$RUN_DIR"
+
+# heed warnings from start-stop-daemon(8) about use of exec flag with
+# interpreters
+/sbin/start-stop-daemon \
+  --start \
+  --background \
+  --make-pidfile \
+  --pidfile "$PIDFILE" \
+  --exec /bin/bash \
+  -- -c "exec /var/vcap/packages/paragon/bin/web \
+    >> \"$LOG_DIR/web.out.log\" \
+    2>> \"$LOG_DIR/web.err.log\""

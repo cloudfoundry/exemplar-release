@@ -1,5 +1,5 @@
 ---
-name: paragon
+name: paragon-sipid
 
 packages:
 - sipid

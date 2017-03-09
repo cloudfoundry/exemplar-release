@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+# If a command fails, exit immediately
+set -e
+
+PIDFILE="/var/vcap/sys/run/paragon/web.pid"
+
+/sbin/start-stop-daemon \
+  --stop \
+  --pidfile "$PIDFILE" \
+  --oknodo \
+  --retry 15
