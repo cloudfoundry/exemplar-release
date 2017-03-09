@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+# If a command fails, exit immediately
+set -e
+
+sipid wait-until-healthy --url https://127.0.0.1:58074/healthcheck --timeout 2m --polling-frequency 1s
