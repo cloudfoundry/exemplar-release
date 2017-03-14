@@ -4,6 +4,6 @@
 set -e
 
 # blocks until drained
-curl -f -X POST https://127.0.0.1:6060/admin/drain
+curl -f --max-time 600 -X POST https://127.0.0.1:6060/admin/drain
 
 echo 0
