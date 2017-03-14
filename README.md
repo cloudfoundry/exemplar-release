@@ -121,6 +121,7 @@ exec ... \
   --out-log-file "/var/vcap/sys/log/<job>/<process>.out.log" \
   --err-log-file "/var/vcap/sys/log/<job>/<process>.err.log"
 ```
+For detail on forwarding logs to external locations, please see [Exporting Logs](#exporting-logs).
 
 #### Post-Start ([docs](https://bosh.io/docs/post-start.html))
 
@@ -219,7 +220,7 @@ processes it should be managing on the machine.
 ## Exporting Logs
 
 BOSH itself does not handle forwarding logs off-system. If you have written your logs appropriately as described in
-the [Logging](#logging) section, operators can choose the correct log-forwarding mechanism for their deployment using job co-location in the deployment manifest or BOSH addons [addons][addons]. Operators may choose to use something like [google-fluentd][google-fluentd] or [syslog-release][syslog-release]. If you are also responsible for providing a deployment manifest generation tool, you may wish to provide the option to add syslog-release forwarding to all components.
+the [Logging](#logging) section, operators can choose the correct log-forwarding mechanism for their deployment using job co-location in the deployment manifest or BOSH [addons][addons]. Operators may choose to use something like [google-fluentd][google-fluentd] or [syslog-release][syslog-release]. If you are also responsible for providing a deployment manifest generation tool, you may wish to provide the option to add syslog-release forwarding to all components.
 
 [addons]: https://bosh.io/docs/runtime-config.html#addons
 [google-fluentd]: https://github.com/cloudfoundry-community/stackdriver-tools#deploying-host-logging
