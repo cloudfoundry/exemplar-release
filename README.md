@@ -20,6 +20,9 @@ recommendations to their unique circumstances.
   * [Stopping](#stopping)
     + [Drain](#drain-docs)
     + [Monit Stop](#monit-stop)
+- [Spec File Advice](#spec-file-advice)
+  * [Properties](#properties)
+  * [Links](#links-docs)
 - [Template Advice](#template-advice)
   * [ERB](#erb)
     + [Testing](#testing)
@@ -229,6 +232,59 @@ called. In this case we do not need to do anything further in the stop executabl
 **Note for Windows Releases**: The Windows BOSH Agent does not use monit and manages starting the script directly. If
                                your pre-start and post-start scripts have been written following the guidance in this
                                document, the Agent will be able to stop your process correctly.
+
+## Spec File Advice
+
+### Properties
+
+The properties you include in your spec file create the product surface for your job from the perspective of the
+operator component. Job properties can make it much easier or much harder to operate a deployment, so one should be
+mindful of the operator when making decisions about properties.
+
+- Properties should not have a "namespace" for the job itself (e.g. `my-job.port`, `my-job.hostname`), but should
+  only use namespace to create property groups that the job cares about (e.g. `database.*` and `blobstore.*`).
+- If a property does not need to be configured specially for every deployment and a reasonable default exists, it should
+  be provided. This lets an operator have a terser deployment manifest, which is easier to generate, read, and modify.
+- Include a description for every property whenever it is slightly likely that it would help with understanding. It
+  can be easy for an operator to misinterpret a property and use it incorrectly.
+
+### Links ([docs](https://bosh.io/docs/links.html))
+
+Links allow jobs to provide and consume configuration that needs to be shared between jobs, which can greatly reduce
+the amount of configuration required in a deployment manifest. Instead, jobs can declare which information they need
+and BOSH will provide that information automatically. When links are used correctly, there are two main benefits:
+
+- IP address information (e.g. locating servers from other jobs) does not need to be provided at all by the operator,
+  so default manifests are intrinsically much more network-agnostic and portable.
+- Configuration can be provided in a manifest to only one job, which will then export it as a link consumed by
+  downstream jobs, making it much easier to modify that configuration and reduce human error. For example, if the port
+  a server listens on is provided as a link, a change to the server's configuration will automatically propagate to all
+  jobs that need to communicate with it.
+
+If links are used whenever a job depends on configuration from another job, manifests can become much simpler and
+deployments can become more reliable. When authoring your release, all properties you include in your spec file should
+change the runtime behavior of your process and should not include IP addresses, domain names, credentials, or
+certificates of other jobs. If you are including these properties, they are candidates for links instead. If the job
+you depend on does not provide the information as a link, please consider submitting an issue or PR to the maintainer.
+
+#### Overriding links
+
+Sometimes it is necessary to allow operators to override individual properties within a link. For example, if your job
+uses a link's IP information to find a dependent service, but a particular deployment may be using custom DNS for
+service discovery, your job template could prefer the DNS property over the link. That template could look like this:
+
+```
+<%
+  server = nil
+  if_p("database_location") do |prop|>
+    server = prop
+  end.else do
+    server = link("database").instances[0].address
+  end
+%>
+
+server: <%= server %>
+```
 
 ## Template Advice
 
