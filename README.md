@@ -220,7 +220,11 @@ processes it should be managing on the machine.
 ## Exporting Logs
 
 BOSH itself does not handle forwarding logs off-system. If you have written your logs appropriately as described in
-the [Logging](#logging) section, operators can choose the correct log-forwarding mechanism for their deployment using job co-location in the deployment manifest or BOSH [addons][addons]. Operators may choose to use something like [google-fluentd][google-fluentd] or [syslog-release][syslog-release]. If you are also responsible for providing a deployment manifest generation tool, you may wish to provide the option to add syslog-release forwarding to all components.
+the [Logging](#logging) section, operators can choose the correct log-forwarding mechanism for their deployment using
+job co-location in the deployment manifest or BOSH [addons][addons]. Operators may choose to use something like
+[google-fluentd][google-fluentd] or [syslog-release][syslog-release]. If you are also responsible for providing a
+deployment manifest generation tool, you may wish to provide the option to add syslog-release forwarding to all
+components.
 
 [addons]: https://bosh.io/docs/runtime-config.html#addons
 [google-fluentd]: https://github.com/cloudfoundry-community/stackdriver-tools#deploying-host-logging
@@ -236,7 +240,10 @@ should only be used to forward logs to loggregator.
 ### The Ol' `tee` and `logger` Approach
 
 Many releases currently include complex setup to forward logs to both `/var/vcap/sys/log` as well as syslog. This
-is not necessary if operators use one of the log-forwarding options mentioned above. Drawbacks of the tee and logger approach include starting multiple processes for every line of logs, fairly subtle behavior that can easily break or security vulnerabilities. If your release has any code like the following, please remove it and follow the recommendations above:
+is not necessary if operators use one of the log-forwarding options mentioned above. Drawbacks of the tee and logger
+approach include starting multiple processes for every line of logs, fairly subtle behavior that can easily break or
+security vulnerabilities. If your release has any code like the following, please remove it and follow the
+recommendations above:
 
 ```
 DO NOT USE THIS CODE
