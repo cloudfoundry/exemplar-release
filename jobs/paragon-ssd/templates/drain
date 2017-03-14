@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-
-# If a command fails, exit immediately
-set -e
-
-# blocks until drained
-curl -f --max-time 600 -X POST https://127.0.0.1:6060/admin/drain
-
-echo 0

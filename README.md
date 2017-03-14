@@ -114,7 +114,7 @@ The general workflow of a start script:
        2>> "$LOG_DIR/web.err.log"
    ```
 
-   Refer to the start script of the pararagon-ssd job for a more-complete example.
+   Refer to the start script of the pararagon job for a more-complete example.
 
 **Note**: The start script is executed as root. Do not assume you can only break your own process.
 
@@ -224,7 +224,7 @@ adding this functionality to your own program normally isn't difficult.
   --stop
 ```
 
-Refer to the stop script of the pararagon-ssd job for a more-complete example.
+Refer to the stop script of the pararagon job for a more-complete example.
 
 If you're using drain to kill the process then your process may already be shut down by the time that `monit stop` is
 called. In this case we do not need to do anything further in the stop executable.

@@ -1,9 +1,0 @@
----
-name: paragon-ssd
-
-packages: []
-
-templates:
-  start: bin/start
-  drain: bin/drain
-  stop: bin/stop

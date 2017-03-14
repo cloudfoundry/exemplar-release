@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-
-# If a command fails, exit immediately
-set -e
-
-PIDFILE="/var/vcap/sys/run/paragon/web.pid"
-
-sipid kill --pid-file "$PIDFILE" --show-stacks
