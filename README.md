@@ -114,6 +114,10 @@ The general workflow of a start script:
 
 **Note**: If your process cannot start quickly, consider moving long-running tasks to pre-start or post-start.
 
+**Note for Windows Releases**: The Windows BOSH Agent does not use monit and manages starting the script directly. If
+                               your pre-start and post-start scripts have been written following the guidance in this
+                               document, the Agent will be able to start your process correctly.
+
 ##### Logging
 
 Job logs should be put in the `/var/vcap/sys/log/<job>` directory. You can redirect the logs from your server (if
@@ -218,6 +222,10 @@ Refer to the stop script of the pararagon-ssd job for a more-complete example.
 
 If you're using drain to kill the process then your process may already be shut down by the time that `monit stop` is
 called. In this case we do not need to do anything further in the stop executable.
+
+**Note for Windows Releases**: The Windows BOSH Agent does not use monit and manages starting the script directly. If
+                               your pre-start and post-start scripts have been written following the guidance in this
+                               document, the Agent will be able to stop your process correctly.
 
 ## Template Advice
 
