@@ -21,9 +21,10 @@ recommendations to their unique circumstances.
     + [Drain](#drain-docshttpsboshiodocsdrainhtml)
     + [Monit Stop](#monit-stop)
 - [Template Advice](#template-advice)
-  * [To ERB or not to ERB](#to-erb-or-not-to-erb)
-  * [BASH best practices](#bash-best-practices)
-- [Monit file](#monit-file)
+  * [ERB](#erb)
+  * [bash](#bash)
+- [Monit Advice](#monit-advice)
+- [Exporting Logs](#exporting-logs)
 
 <!-- tocstop -->
 
@@ -121,38 +122,6 @@ exec ... \
   --err-log-file "/var/vcap/sys/log/<job>/<process>.err.log"
 ```
 
-**Note**: `syslog_forwarder` from the [syslog-release][syslog-release] should be co-located with your job so
-that all logs in `/var/vcap/sys/log` are forwarded appropriately (usually to loggregator). If your release is
-not using `syslog_forwarder` and still relies on `metron_agent` (from [loggregator][loggregator]) for syslog
-forwarding<sup>1</sup> then logs must be forwarded to syslog manually using the `logger` and `tee` programs:
-
-[syslog-release]: https://github.com/cloudfoundry/syslog-release
-[loggregator]: https://github.com/cloudfoundry/loggregator
-
-```
-exec > \
-  >(
-    tee -a >(logger -p user.info -t vcap.$(basename $0).stdout) | \
-      awk -W interactive '{ gsub(/\\n/, ""); system("echo -n [$(date +\"%Y-%m-%d %H:%M:%S%z\")]"); print " " $0 }' \
-      >> /var/vcap/sys/log/<job>/<process>.out.log
-  )
-exec 2> \
-  >(
-    tee -a >(logger -p user.error -t vcap.$(basename $0).stderr) | \
-      awk -W interactive '{ gsub(/\\n/, ""); system("echo -n [$(date +\"%Y-%m-%d %H:%M:%S%z\")]"); print " " $0 }' \
-      >> /var/vcap/sys/log/<job>/<process>.err.log
-  )
-```
-
-This is _ugly_ (and starts multiple processes for every line of logs). Use `syslog_forwarder`. Please.
-
-<sub>If you must use this, you should understand it. The `exec` calls redirect `STDOUT` and `STDERR` respectively,
-sending them to a sub-shell that calls `tee`. `tee` splits the output to 1) syslog via `logger` and 2) the BOSH log
-directory (but not before appending timestamps with `awk`).</sub>
-
-1. **Note**: `metron_agent` should only be used to receive logs over UDP. Its additional syslog forwarding capabilities
-   should not be relied upon.
-
 #### Post-Start ([docs](https://bosh.io/docs/post-start.html))
 
 Post-start is useful for custom health-checks to ensure you job has started correctly. For example, if your process
@@ -246,6 +215,53 @@ You must specify `group vcap` in your `monit` file because the agent [uses this 
 processes it should be managing on the machine.
 
 [agent-monit-group]: https://github.com/cloudfoundry/bosh-agent/blob/5beacb106a67e403a15e9926b6ee39006d774d31/jobsupervisor/monit_job_supervisor.go#L114
+
+## Exporting Logs
+
+BOSH itself does not handle forwarding logs off-system. If you have written your logs appropriately as described in
+the [Logging](#logging) section, operators can choose the correct log-forwarding mechanism for their deployment.
+Operators may choose to use something like [google-fluentd][google-fluentd] or [syslog-release][syslog-release]. If
+you are also responsible for providing a deployment manifest generation tool, you may wish to provide the option to
+add syslog-release forwarding to all components.
+
+[google-fluentd]: https://github.com/cloudfoundry-community/stackdriver-tools#deploying-host-logging
+[syslog-release]: https://github.com/cloudfoundry/syslog-release
+[loggregator]: https://github.com/cloudfoundry/loggregator
+
+### Metron Agent
+
+`metron_agent` has functionality to forward syslogs, but this has been superseded by `syslog-release`. `metron_agent`
+should only be used to forward logs to loggregator.
+
+### The Ol' `tee` and `logger` Approach
+
+Many releases currently include complex setup to forward logs to both `/var/vcap/sys/log` as well as syslog. This
+should is not necessary if operators use one of the log-forwarding options mentioned above, starts multiple processes
+for every line of logs, and has fairly subtle behavior that can break or include security vulnerabilities. If your
+release has any code like the following, please remove it and follow the recommendations above:
+
+```
+DO NOT USE THIS CODE
+
+exec > \
+  >(
+    tee -a >(logger -p user.info -t vcap.$(basename $0).stdout) | \
+      awk -W interactive '{ gsub(/\\n/, ""); system("echo -n [$(date +\"%Y-%m-%d %H:%M:%S%z\")]"); print " " $0 }' \
+      >> /var/vcap/sys/log/<job>/<process>.out.log
+  )
+exec 2> \
+  >(
+    tee -a >(logger -p user.error -t vcap.$(basename $0).stderr) | \
+      awk -W interactive '{ gsub(/\\n/, ""); system("echo -n [$(date +\"%Y-%m-%d %H:%M:%S%z\")]"); print " " $0 }' \
+      >> /var/vcap/sys/log/<job>/<process>.err.log
+  )
+
+DO NOT USE THIS CODE
+```
+
+<sub>If you must use this, you should understand it. The `exec` calls redirect `STDOUT` and `STDERR` respectively,
+sending them to a sub-shell that calls `tee`. `tee` splits the output to 1) syslog via `logger` and 2) the BOSH log
+directory (but not before appending timestamps with `awk`).</sub>
 
 <!-- Global Links -->
 
