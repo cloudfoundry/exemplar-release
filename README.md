@@ -87,17 +87,28 @@ The general workflow of a start script:
 
 3. Change ownership permissions on the log and run directories to user vcap and group vcap
 
-4. Write the process ID (in BASH, this is `$$`) your pidfile in `$RUN_DIR/<task name>.pid`
-   - Idempotency recommendation: Your start script may be called more than once without stopping any existing processes.
-     Therefore, you should only write to this file if it does not exist and contain the PID of a running process. If it
-     contains a running process, assume that you should exit.
-   - **Note**: This can be achieved simply using [sipid][sipid]'s `sipid claim` command.
+4. Run your process with `start-stop-daemon`, which will manage your process's pidfile, ensuring multiple instances
+   of the process are not run simultaneously. A recommended usage of `start-stop-daemon` looks like this:
 
-5. `exec` your process, which will execute it in the context of your start script, replacing it. Use `chpst` to change
-   the running user to `vcap` so your process does not run as root. This looks like
-   `exec chpst -u vcap:vcap /var/vcap/packages/<package name>/bin/<executable>`.
-  - Avoid using monit to change the ownership of the process. Depend on monit features sparingly, as Monit is not
-    guaranteed to exist in future BOSH releases.
+   ```
+   /sbin/start-stop-daemon \
+
+     # Write the pidfile, and error if it exists
+     # and refers to an already-running process
+     --pidfile "$PIDFILE" \
+     --make-pidfile \
+
+     # Run the process as the less-privileged vcap user
+     --chuid vcap:vcap \
+
+     # Start the given process and redirect its logs
+     --start \
+     --exec /var/vcap/packages/paragon/bin/web \
+        >> "$LOG_DIR/web.out.log" \
+       2>> "$LOG_DIR/web.err.log"
+   ```
+
+   Refer to the start script of the pararagon-ssd job for a more-complete example.
 
 **Note**: The start script is executed as root. Do not assume you can only break your own process.
 
@@ -183,8 +194,27 @@ supports dumping the stacks of all running threads on `SIGQUIT` (Go and Java do)
 before the `SIGKILL` to aid debugging why the process is stuck. If you are not using a `SIGKILL` respecting runtime then
 adding this functionality to your own program normally isn't difficult.
 
-Instead of writing this pattern in `bash` you can use our `sipid kill` command which will handle all of the details of
-killing a process within a timeout for you.
+`start-stop-daemon` can be used for this:
+
+```
+/sbin/start-stop-daemon \
+
+  # Remove the pidfile after killing the process
+  --pidfile "$PIDFILE" \
+  --remove-pidfile \
+
+  # Send SIGTERM, wait for the process to die for 20 seconds
+  # If the process has not died, send SIGQUIT and wait for 1 second
+  # If the process has still not died, send SIGKILL
+  --retry TERM/20/QUIT/1/KILL \
+
+  # If the process is already gone, do not error
+  --oknodo \
+
+  --stop
+```
+
+Refer to the stop script of the pararagon-ssd job for a more-complete example.
 
 If you're using drain to kill the process then your process may already be shut down by the time that `monit stop` is
 called. In this case we do not need to do anything further in the stop executable.
@@ -271,4 +301,3 @@ directory (but not before appending timestamps with `awk`).</sub>
 <!-- Global Links -->
 
 [contact-us]: https://github.com/cloudfoundry/exemplar-release/pulls
-[sipid]: https://github.com/cloudfoundry/sipid
