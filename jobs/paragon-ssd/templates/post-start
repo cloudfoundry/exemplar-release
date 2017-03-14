@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+# If a command fails, exit immediately
+set -e
+
+export timeout=120
+export polling_frequency=1
+
+export max_attempts=$((timeout / polling_frequency))
+export attempts=0
+while [[ "$max_attempts" -ge "$attempts" ]]; do
+    set +e
+    echo "attempt $attempts"
+    curl -f --max-time 120 https://127.0.0.1:58074/healthcheck
+    if [[ $? -eq 0 ]]; then
+        exit 0
+    fi
+    set -e
+
+    attempts=$(($attempts + 1))
+
+    sleep "$polling_frequency"
+done
+
+exit 1
