@@ -223,12 +223,18 @@ called. In this case we do not need to do anything further in the stop executabl
 
 ### ERB
 
-We advise avoiding any ERB in your control scripts wherever possible. The control flow of starting and stopping your
-program should be deterministic and simple. All ERB should be relegated to static configuration files so that properties
-can be interpolated.
-
 Any template in your job can use ERB (even the monit files!). While this is extremely powerful it can be very difficult
-to understand and maintain complex templates.
+to understand and maintain complex templates. Therefore, we advise avoiding any ERB in your control scripts wherever
+possible. The control flow of starting and stopping your program should be deterministic and simple. All ERB should be
+relegated to static configuration files so that properties can be interpolated.
+
+#### Testing
+
+Your templates should be simple enough to not need testing, such as by doing a simple passthrough to property parsing
+in your own code, but you may find yourself with more-complex templating needs, such as when writing a release wrapping
+third-party code. Unfortunately, it is difficult to test BOSH template rendering. It is preferable to have a simple
+template (e.g. `<% p('my-properties').to_json %>`) that you transform with a custom executable that you can test
+in your standard unit-testing workflow.
 
 ### bash
 
