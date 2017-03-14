@@ -22,9 +22,12 @@ recommendations to their unique circumstances.
     + [Monit Stop](#monit-stop)
 - [Template Advice](#template-advice)
   * [ERB](#erb)
+    + [Testing](#testing)
   * [bash](#bash)
 - [Monit Advice](#monit-advice)
 - [Exporting Logs](#exporting-logs)
+  * [Metron Agent](#metron-agent)
+  * [The Ol' `tee` and `logger` Approach](#the-ol-tee-and-logger-approach)
 
 <!-- tocstop -->
 
