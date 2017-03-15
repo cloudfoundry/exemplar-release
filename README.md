@@ -334,6 +334,13 @@ components.
 [syslog-release]: https://github.com/cloudfoundry/syslog-release
 [loggregator]: https://github.com/cloudfoundry/loggregator
 
+**Backwards Compatibility Warning**: If your release is currently responsible for forwarding logs off-system, by
+following this guide and removing that functionality, you are putting the onus for logging on deployment authors
+(e.g. [cf-deployment][cf-deployment] or your local friendly closed-source proprietary offering) to configure logging.
+If your release has traditionally done this, deployment authors may not know to update the deployment and logs could
+be lost. If you are removing this functionality, please coordinate appropriately with deployment authors and operators.
+
+[cf-deployment]: https://github.com/cloudfoundry/cf-deployment
 
 ### Metron Agent
 
