@@ -5,5 +5,6 @@ packages: []
 
 templates:
   start: bin/start
+  post-start: bin/post-start
   drain: bin/drain
   stop: bin/stop
