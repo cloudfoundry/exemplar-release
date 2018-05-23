@@ -53,12 +53,12 @@ another way to tell upstream components about your imminent demise.
 ## BOSH Job Lifecycle
 
 Every BOSH job goes through a specific lifecycle for starting and stopping. The BOSH website has a great
-[overview](https://bosh.io/docs/job-lifecycle.html) of the lifecycle. You may wish to review this before reading on to
+[overview](https://bosh.io/docs/job-lifecycle/) of the lifecycle. You may wish to review this before reading on to
 our recommendations for the individual parts of the lifecycle.
 
 ### Starting
 
-#### Pre-Start ([docs](https://bosh.io/docs/pre-start.html))
+#### Pre-Start ([docs](https://bosh.io/docs/pre-start/))
 
 Pre-start scripts are run before BOSH hands off control to Monit, so will not necessarily run every time a job starts
 (e.g. if a VM is rebooted outside of BOSH's control). However, pre-start scripts will run at least once for every new
@@ -68,7 +68,7 @@ such as database migrations. However, because the pre-start script does not nece
 will run in, do not perform any work in temporary directories such as `/var/vcap/sys/run` (see [VM Configuration
 Locations][vm-config-loc] for the list of temporary directories).
 
-[vm-config-loc]: https://bosh.io/docs/vm-config.html
+[vm-config-loc]: https://bosh.io/docs/vm-config/
 
 In general, a pre-start script should not be necessary and the start script should be sufficient. If you find a
 pre-start script is necessary, keep the above caveats in mind.
@@ -144,14 +144,14 @@ exec ... \
 ```
 For detail on forwarding logs to external locations, please see [Exporting Logs](#exporting-logs).
 
-#### Post-Start ([docs](https://bosh.io/docs/post-start.html))
+#### Post-Start ([docs](https://bosh.io/docs/post-start/))
 
 Post-start is useful for custom health-checks to ensure you job has started correctly. For example, if your process
 starts quickly, but takes time to discover services or connect to its backend, you may wish to use post-start to query
 the readiness of your job to start handling requests. If a post-start script is provided, BOSH will not consider a job
 to be ready until it has exited successfully.
 
-#### Post-Deploy ([docs](https://bosh.io/docs/post-deploy.html))
+#### Post-Deploy ([docs](https://bosh.io/docs/post-deploy/))
 
 The authors have never seen this used. It may be useful for checking the health of an entire deployment. If you find it
 useful, please [let us know][contact-us].
@@ -161,7 +161,7 @@ useful, please [let us know][contact-us].
 Job is unmonitored before any stop scripts can run, so you can safely exit in either `drain` or `monit stop` without the
 job becoming listed as unhealthy.
 
-#### Drain ([docs](https://bosh.io/docs/drain.html))
+#### Drain ([docs](https://bosh.io/docs/drain/))
 
 Drain scripts are optional hooks into the BOSH job lifecycle that are run before stopping the job via Monit. They
 are typically used for services which must perform some work before being shut down, for example flushing a request
@@ -248,7 +248,7 @@ mindful of the operator when making decisions about properties.
 - Include a description for every property whenever it is slightly likely that it would help with understanding. It
   can be easy for an operator to misinterpret a property and use it incorrectly.
 
-### Links ([docs](https://bosh.io/docs/links.html))
+### Links ([docs](https://bosh.io/docs/links/))
 
 Links allow jobs to provide and consume configuration that needs to be shared between jobs, which can greatly reduce
 the amount of configuration required in a deployment manifest. Instead, jobs can declare which information they need
@@ -329,7 +329,7 @@ job co-location in the deployment manifest or BOSH [addons][addons]. Operators m
 deployment manifest generation tool, you may wish to provide the option to add syslog-release forwarding to all
 components.
 
-[addons]: https://bosh.io/docs/runtime-config.html#addons
+[addons]: https://bosh.io/docs/runtime-config/#addons
 [google-fluentd]: https://github.com/cloudfoundry-community/stackdriver-tools#deploying-host-logging
 [syslog-release]: https://github.com/cloudfoundry/syslog-release
 [loggregator]: https://github.com/cloudfoundry/loggregator
