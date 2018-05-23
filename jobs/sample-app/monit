@@ -1,0 +1,5 @@
+check process sample-app
+  with pidfile /var/vcap/sys/run/bpm/sample-app/sample-app.pid
+  start program "/var/vcap/jobs/bpm/bin/bpm start sample-app"
+  stop program "/var/vcap/jobs/bpm/bin/bpm stop sample-app"
+  group vcap
