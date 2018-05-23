@@ -31,6 +31,7 @@ recommendations to their unique circumstances.
 - [Exporting Logs](#exporting-logs)
   * [Metron Agent](#metron-agent)
   * [The Ol' `tee` and `logger` Approach](#the-ol-tee-and-logger-approach)
+- [Backup and Restore features](#backup-and-restore-features)
 
 <!-- tocstop -->
 
@@ -377,6 +378,25 @@ DO NOT USE THIS CODE
 <sub>If you must use this, you should understand it. The `exec` calls redirect `STDOUT` and `STDERR` respectively,
 sending them to a sub-shell that calls `tee`. `tee` splits the output to 1) syslog via `logger` and 2) the BOSH log
 directory (but not before appending timestamps with `awk`).</sub>
+
+
+## Backup and Restore features
+
+The BOSH Backup and Restore project (BBR) provides a framework for backing up and restoring BOSH deployments and BOSH
+Directors.
+
+For more information, go read the [BOSH Backup and Restore](https://docs.cloudfoundry.org/bbr/) chapter in Cloud Foundry
+documentation.
+
+As a BOSH Release author, you shall also be interested in reading the
+[BOSH Backup and Restore Developer's Guide](https://docs.cloudfoundry.org/bbr/bbr-devguide.html).
+
+The BBR project provides its own
+[Exemplar Backup and Restore Release](https://github.com/cloudfoundry-incubator/exemplar-backup-and-restore-release) for
+the purpose of demonstrating best practice in implementing the
+[BBR contract](https://docs.cloudfoundry.org/bbr/bbr-devguide.html). We advise you to refer to this materials for
+learning more about providing standard backup and restore features in your BOSH Releases. Here we just provide an
+example [`stateful-daemon` job](./jobs/stateful-daemon) which implements very basic BBR features.
 
 <!-- Global Links -->
 
