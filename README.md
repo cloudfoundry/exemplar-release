@@ -20,7 +20,7 @@ recommendations to their unique circumstances.
   * [Stopping](#stopping)
     + [Drain](#drain-docs)
     + [Monit Stop](#monit-stop)
-- [Spec File Advice](#spec-file-advice)
+- [Advice for authoring `spec` files](#advice-for-authoring-spec-files)
   * [Properties](#properties)
   * [Links](#links-docs)
 - [Template Advice](#template-advice)
@@ -142,7 +142,42 @@ exec ... \
   --out-log-file "/var/vcap/sys/log/<job>/<process>.out.log" \
   --err-log-file "/var/vcap/sys/log/<job>/<process>.err.log"
 ```
+
+What is important here, is that all log files _must_ end with the `.log` extention in order to be properly rotated by
+BOSH. If any other extension is used for files where daemon append logs, you might end up with full disks and experience
+failing nodes. For those who are interested to know more, BOSH enforces a Logrotate config
+[in `/etc/logrotate.d/vcap`](https://bosh.io/docs/vm-config/#global).
+
 For detail on forwarding logs to external locations, please see [Exporting Logs](#exporting-logs).
+
+Logging the activity of `start`, `stop` is not critical when leveraging `start-stop-daemon` because they become really
+simple. Some `pre-start` or `post-start` script are not trivial though, and need logging for debug purpose. In such
+case, we recommend you prepend some time indication to the logged lines. This is useful for debugging nodes that have
+been deployed for a long time, in order to distinguish old errors from recent errors.
+
+```bash
+function start_logging() {
+  exec \
+    > >(prepend_datetime >> /var/vcap/sys/log/<job>/<process>.out.log) \
+    2> >(prepend_datetime >> /var/vcap/sys/log/<job>/<process>.err.log)
+}
+
+function prepend_datetime() {
+  awk -W interactive '{ system("echo -n [$(date +%FT%T%z)]"); print " " $0 }'
+}
+
+function main() {
+  start_logging
+  ...
+}
+
+main "$@"
+```
+
+As a good remark, you'll note that the above code starts multiple processes for every line of logs. Yes indeed, this way
+of doing is not to be applied to all cases. Here, starting multiple processes for every line of logs is acceptable
+though, because scripts like `start`, `stop`, `pre- start`, `post-start` or `drain` are not supposed to be executed
+often or to produce massive amounts of logs.
 
 #### Post-Start ([docs](https://bosh.io/docs/post-start/))
 
@@ -150,6 +185,11 @@ For detail on forwarding logs to external locations, please see [Exporting Logs]
 starts quickly, but takes time to discover services or connect to its backend, you may wish to use `post-start` to query
 the readiness of your job to start handling requests. If a `post-start` script is provided, BOSH will not consider a job
 to be ready until it has exited successfully.
+
+When ensuring in a `post-start` that your job's is healthy and its dependencies are met, you are responsible for
+implementing the proper timeouts. Most of the time, these timeouts will need to be configurable in order for your job to
+adapt to slow or loaded IaaS infrastructures. A good way to do this is to expose a timeout scale factor in your job's
+configuration properties.
 
 #### Post-Deploy ([docs](https://bosh.io/docs/post-deploy/))
 
@@ -189,10 +229,29 @@ is complete.
 Open question: If your job needs to wait for another job to drain first, what is the best way to block on that? If you
 have any ideas, please [let us know][contact-us].
 
+In a `drain` script, you might need to tell the difference between your process being _temporarily_ stopped, or
+_permanently_ decommissioned. This is especially relevant for cluster nodes that share a global state. A node that
+permanently leaves the cluster might have to re-distribute its data to the other nodes that stay in the cluster (this is
+for instance the case with Cassandra nodes) or just tell the others that it's no use waiting for it to come back
+(MongoDB calls this “stepping down”).
+
+In such case, BOSH proposed a hack-ish check on the permanent disk size being set to zero in the future. This
+information is provided by the JSON document exposed by the `BOSH_JOB_NEXT_STATE` environment variable, as detailed in
+the [Environment Variables](https://bosh.io/docs/drain/#environment-variables) section of the `drain` script
+documentation.
+
+You can see two examples of such scripts that follow this best practice:
+- For etcd, in [cloudfoundry-incubator/cfcr-etcd-release/jobs/etcd/templates/bin/drain.erb](etcd-drain)
+- For Cassandra, in [orange-cloudfoundry/cassandra-boshrelease/jobs/cassandra/templates/bin/drain](cassandra-drain)
+
+[etcd-drain]: https://github.com/cloudfoundry-incubator/cfcr-etcd-release/blob/master/jobs/etcd/templates/bin/drain.erb
+[cassandra-drain]: https://github.com/orange-cloudfoundry/cassandra-boshrelease/blob/master/jobs/cassandra/templates/bin/drain
+
 #### Monit Stop
 
 The `stop program` in your job's `monit` file is executed after the `drain` script (if present) has finished running. It can
-also be run directly by an operator if they execute `monit stop <job>` on the machine. By default, there is a 30 second
+also be run directly by an operator if they execute `monit stop <job>` on the machine (though operators should
+always consider running `bosh stop <instance-group>/<index>` instead of using `monit stop` directly). By default, there is a 30 second
 timeout on this script completing. Monit will assume scripts taking longer than this have failed. We do not recommend
 changing this value if you need more time. Instead, you should do all the work necessary in your `drain` script such
 that your service can shutdown quickly (where “quickly” generally means in under 10 seconds).
@@ -233,7 +292,7 @@ called. In this case we do not need to do anything further in the stop executabl
 your `pre-start` and `post-start` scripts have been written following the guidance in this document, the Windows BOSH
 Agent will be able to stop your process correctly.
 
-## Spec File Advice
+## Advice for authoring `spec` files
 
 ### Properties
 
@@ -247,6 +306,28 @@ mindful of the operator when making decisions about properties.
   be provided. This lets an operator have a terser deployment manifest, which is easier to generate, read, and modify.
 - Include a description for every property whenever it is slightly likely that it would help with understanding. It
   can be easy for an operator to misinterpret a property and use it incorrectly.
+
+Here is an example of properly written description, from the [ATC job of Concourse](atc-spec-example)
+
+```yaml
+  external_url:
+    description: |
+      Externally reachable URL of the ATCs. Required for OAuth. This will be
+      auto-generated using the IP of each ATC VM if not specified, however
+      this is only a reasonable default if you have a single instance.
+
+      Typically this is the URL that you as a user would use to reach your CI.
+      For multiple ATCs it would go to some sort of load balancer.
+    example: https://ci.concourse.ci
+```
+
+You can find other good examples [for Cassandra](cassandra-spec-example) or [MongoDB](mongod-spec-example). Generally,
+using the pipe `|` notation for the `description:` YAML property, and providing a text with lines wrapped around the
+80th column, is best for readability.
+
+[atc-spec-example]: https://github.com/concourse/concourse/blob/master/jobs/atc/spec#L78-L86
+[cassandra-spec-example]: https://github.com/orange-cloudfoundry/cassandra-boshrelease/blob/master/jobs/cassandra/spec#L254-L264
+[mongod-spec-example]: https://github.com/orange-cloudfoundry/mongodb-boshrelease/blob/master/jobs/mongod/spec#L80-L92
 
 ### Links ([docs](https://bosh.io/docs/links/))
 
@@ -275,15 +356,17 @@ service discovery, your job template could prefer the DNS property over the link
 
 ```yaml
 <%
+  require "json"
+
   server = nil
   if_p("database_location") do |prop|
     server = prop
   end.else do
     server = link("database").instances[0].address
   end
-%>
+-%>
 
-server: <%= server %>
+server: <%= server.to_json %>
 ```
 
 ## Template Advice
@@ -295,20 +378,70 @@ to understand and maintain complex templates. Therefore, we advise avoiding any 
 possible. The control flow of starting and stopping your program should be deterministic and simple. All ERB should be
 relegated to static configuration files so that properties can be interpolated.
 
+### Encoding
+
+When you inject configuration properties with the ERB syntax in shell scripts or configuration files, you should take
+great care for properly encoding special caracters that are meaningful to the target syntax. Failing at doing so could
+cause shell scripts to erase critical data, or mis-configuration in YAML files to cause data loss.
+
+With Bash shell scripts, we recommend encoding properties using `shellwords`:
+
+```bash
+#!/usr/bin/env bash
+<%
+  require "shellwords"
+
+  def esc(x)
+    Shellwords.shellescape(x)
+  end
+-%>
+
+some_property=<%= esc(p('some_property')) %> # <- Please observe that you must not quote the value here
+```
+
+With YAML config files, we recommend encoding properties with `json`:
+
+```yaml
+---
+<% require "json" -%>
+
+# The name of the cluster. This is mainly used to prevent machines in
+# one logical cluster from joining another.
+cluster_name: <%= p("cluster_name").to_json %> # <- Please observe that you must not quote the value here
+```
+
+For complex logic in YAML templates, you can adopt [the full-Ruby option](complex-bosh-property-templating), where you
+first build a Ruby Hash for your YAML configuration, and then `YAML.dump()` it, which properly performs the expected
+encoding.
+
+Don't hesitate to [contact us][contact-us] and submit advices or best-practice encoding for other syntax schemes.
+
+[complex-bosh-property-templating]: https://bosh.io/docs/bpm/transitioning/#complex-bosh-property-templating
+
 #### Testing
 
 Your templates should be simple enough to not need testing, such as by doing a simple passthrough to property parsing
 in your own code, but you may find yourself with more-complex templating needs, such as when writing a release wrapping
-third-party code. Unfortunately, it is difficult to test BOSH template rendering. It is preferable to have a simple
-template (e.g. `<% p('my-properties').to_json %>`) that you transform with a custom executable that you can test
-in your standard unit-testing workflow.
+third-party code. Testing BOSH templates is classically a hard topic, but it has been greatly simplified with a new
+version of the `bosh-template` Gem, and a proper documentation of [unit testing](unit-testing) with it.
 
-### bash
+As it might still be difficult to test BOSH template rendering, you could also imagine having a simple template (e.g.
+`<% p('my-properties').to_json %>`) that you would transform with a custom executable, which you can test in your
+standard unit-testing workflow.
+
+[unit-testing]: https://bosh.io/docs/job-templates/#unit-testing
+
+### Bash
+
+We advise you to use the `#!/usr/bin/env bash` sheebang variant.
 
 The [ShellCheck][shellcheck] tool can be used to find common errors in your `bash` scripts. This yet another reason to
 keep ERB out of your scripts!
 
+You can also possibly use [BATS](bats) unit tests, or similar testing frameworks.
+
 [shellcheck]: https://github.com/koalaman/shellcheck
+[bats]: https://github.com/sstephenson/bats
 
 ## Monit Advice
 
