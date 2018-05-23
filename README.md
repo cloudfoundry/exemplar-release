@@ -171,13 +171,14 @@ connections or a lack of availability, a drain script should be used to prevent 
 will send a request to a drain endpoint on your process and wait for it to return rather than implementing the drain
 behavior itself.
 
-A concrete example is the [gorouter][gorouter], which has a configurable `drain_wait` parameter. When non-zero,
+A concrete example is the [gorouter][gorouter], which has a configurable [`drain_wait`][drain-wait] parameter. When non-zero,
 gorouter's drain script will instruct gorouter to report itself as unhealthy to its load-balancer with the intent of
 being removed from the balanced instance group before shutting down and rejecting requests. When `monit stop` is called,
 the router will already be receiving no connections, so will not drop connections when it is shut down quickly. This is
 the [lame duck][lame-duck] pattern.
 
 [gorouter]: https://github.com/cloudfoundry/gorouter
+[drain-wait]: https://github.com/cloudfoundry/routing-release/blob/develop/jobs/gorouter/spec#L62-L67
 [lame-duck]: https://landing.google.com/sre/book/chapters/load-balancing-datacenter.html#robust_approach_lame_duck
 
 Drain scripts have no timeout, so should take whatever time necessary to block on any draining work. One may, however,
