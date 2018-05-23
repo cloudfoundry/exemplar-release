@@ -50,6 +50,24 @@ can use a signal in your drain script to mark yourself as unhealthy. After a per
 are detected you can stop the process completely. If you aren't behind a load balancer then you will have to find
 another way to tell upstream components about your imminent demise.
 
+
+## New BOSH Job Lifecycle with BPM
+
+BPM stands for BOSH Process Manager. You can get more information about it in the [BPM chapter](bpm-chapter) of the BOSH
+documentation. The [BPM release repository](bpm-release) is also a great place where to find more information about BPM.
+
+We provide here a [`sample-app` job](./jobs/sample-app) that shows how simple things can be when delegating daemons
+management to BPM. That said, BPM doesn't provide an answer to all use cases yet. Classical BOSH `pre-start` and `drain`
+scripts are still necessary for the use cases documented below.
+
+One note about BPM `pre_start` hooks: contrarily to BOSH `pre-start`, BPM `pre_start` scripts are run at every
+`monit start` or `monit stop`, i.e. even when the BOSH instance gets back up after being evicted by the underlying Cloud
+infrastructure. Actually, you should put in your BPM `pre_start` what you would have put in your `start` script before
+`exec`-ing your process.
+
+[bpm-chapter]: https://bosh.io/docs/bpm/bpm/
+[bpm-release]: https://github.com/cloudfoundry-incubator/bpm-release
+
 ## BOSH Job Lifecycle
 
 Every BOSH job goes through a specific lifecycle for starting and stopping. The BOSH website has a great
