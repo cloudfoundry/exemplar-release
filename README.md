@@ -241,8 +241,8 @@ the [Environment Variables](https://bosh.io/docs/drain/#environment-variables) s
 documentation.
 
 You can see two examples of such scripts that follow this best practice:
-- For etcd, in [cloudfoundry-incubator/cfcr-etcd-release/jobs/etcd/templates/bin/drain.erb](etcd-drain)
-- For Cassandra, in [orange-cloudfoundry/cassandra-boshrelease/jobs/cassandra/templates/bin/drain](cassandra-drain)
+- For etcd, in [cloudfoundry-incubator/cfcr-etcd-release/jobs/etcd/templates/bin/drain.erb][etcd-drain]
+- For Cassandra, in [orange-cloudfoundry/cassandra-boshrelease/jobs/cassandra/templates/bin/drain][cassandra-drain]
 
 [etcd-drain]: https://github.com/cloudfoundry-incubator/cfcr-etcd-release/blob/master/jobs/etcd/templates/bin/drain.erb
 [cassandra-drain]: https://github.com/orange-cloudfoundry/cassandra-boshrelease/blob/master/jobs/cassandra/templates/bin/drain
@@ -307,7 +307,7 @@ mindful of the operator when making decisions about properties.
 - Include a description for every property whenever it is slightly likely that it would help with understanding. It
   can be easy for an operator to misinterpret a property and use it incorrectly.
 
-Here is an example of properly written description, from the [ATC job of Concourse](atc-spec-example)
+Here is an example of properly written description, from the [ATC job of Concourse][atc-spec-example]
 
 ```yaml
   external_url:
@@ -410,7 +410,7 @@ With YAML config files, we recommend encoding properties with `json`:
 cluster_name: <%= p("cluster_name").to_json %> # <- Please observe that you must not quote the value here
 ```
 
-For complex logic in YAML templates, you can adopt [the full-Ruby option](complex-bosh-property-templating), where you
+For complex logic in YAML templates, you can adopt [the full-Ruby option][complex-bosh-property-templating], where you
 first build a Ruby Hash for your YAML configuration, and then `YAML.dump()` it, which properly performs the expected
 encoding.
 
@@ -423,7 +423,7 @@ Don't hesitate to [contact us][contact-us] and submit advices or best-practice e
 Your templates should be simple enough to not need testing, such as by doing a simple passthrough to property parsing
 in your own code, but you may find yourself with more-complex templating needs, such as when writing a release wrapping
 third-party code. Testing BOSH templates is classically a hard topic, but it has been greatly simplified with a new
-version of the `bosh-template` Gem, and a proper documentation of [unit testing](unit-testing) with it.
+version of the `bosh-template` Gem, and a proper documentation of [unit testing][unit-testing] with it.
 
 As it might still be difficult to test BOSH template rendering, you could also imagine having a simple template (e.g.
 `<% p('my-properties').to_json %>`) that you would transform with a custom executable, which you can test in your
@@ -438,7 +438,7 @@ We advise you to use the `#!/usr/bin/env bash` sheebang variant.
 The [ShellCheck][shellcheck] tool can be used to find common errors in your `bash` scripts. This yet another reason to
 keep ERB out of your scripts!
 
-You can also possibly use [BATS](bats) unit tests, or similar testing frameworks.
+You can also possibly use [BATS][bats] unit tests, or similar testing frameworks.
 
 [shellcheck]: https://github.com/koalaman/shellcheck
 [bats]: https://github.com/sstephenson/bats
@@ -465,7 +465,6 @@ components.
 [addons]: https://bosh.io/docs/runtime-config/#addons
 [google-fluentd]: https://github.com/cloudfoundry-community/stackdriver-tools#deploying-host-logging
 [syslog-release]: https://github.com/cloudfoundry/syslog-release
-[loggregator]: https://github.com/cloudfoundry/loggregator
 
 **Backwards Compatibility Warning**: If your release is currently responsible for forwarding logs off-system, by
 following this guide and removing that functionality, you are putting the onus for logging on deployment authors
@@ -478,7 +477,9 @@ be lost. If you are removing this functionality, please coordinate appropriately
 ### Metron Agent
 
 `metron_agent` has functionality to forward syslogs, but this has been superseded by `syslog-release`. `metron_agent`
-should only be used to forward logs to loggregator.
+should only be used to forward logs to [loggregator][loggregator].
+
+[loggregator]: https://github.com/cloudfoundry/loggregator
 
 ### The Ol' `tee` and `logger` Approach
 
