@@ -46,7 +46,7 @@ started in any order and then propagate health upwards through their dependents 
 this burden of job ordering from the operator reduces complexity and increases system reliability.
 
 On the other hand, stopping can follow a similar but reversed pattern. If your service is being load-balanced then you
-can use a signal in your drain script to mark yourself as unhealthy. After a period of time or after no more requests
+can use a signal in your `drain` script to mark yourself as unhealthy. After a period of time or after no more requests
 are detected you can stop the process completely. If you aren't behind a load balancer then you will have to find
 another way to tell upstream components about your imminent demise.
 
@@ -61,23 +61,23 @@ our recommendations for the individual parts of the lifecycle.
 #### Pre-Start ([docs](https://bosh.io/docs/pre-start/))
 
 Pre-start scripts are run before BOSH hands off control to Monit, so will not necessarily run every time a job starts
-(e.g. if a VM is rebooted outside of BOSH's control). However, pre-start scripts will run at least once for every new
-release version that is deployed, and have no timeout (in contrast to a start script). Therefore, pre-start scripts
+(e.g. if a VM is rebooted outside of BOSH's control). However, `pre-start` scripts will run at least once for every new
+release version that is deployed, and have _no timeout_ (in contrast to a `start` script). Therefore, `pre-start` scripts
 can best be used for performing lengthy set-up of persistent state that must be done for a new version of a release,
-such as database migrations. However, because the pre-start script does not necessarily run in every VM your job
+such as database migrations. However, because the `pre-start` script does not necessarily run in every VM your job
 will run in, do not perform any work in temporary directories such as `/var/vcap/sys/run` (see [VM Configuration
 Locations][vm-config-loc] for the list of temporary directories).
 
 [vm-config-loc]: https://bosh.io/docs/vm-config/
 
-In general, a pre-start script should not be necessary and the start script should be sufficient. If you find a
-pre-start script is necessary, keep the above caveats in mind.
+In general, a `pre-start` script should not be necessary and the start script should be sufficient. If you find a
+`pre-start` script is necessary, keep the above caveats in mind.
 
 #### Monit Start
 
-The start script has two main responsibilities: writing the process ID (PID) to a pidfile and starting the main process.
-All setup required for the process to run (that has not been done in the pre-start script) must be done at this time.
-Monit places a short timeout on the pidfile being written, so the work done in the start script should be focused on
+The `start` script has two main responsibilities: writing the process ID (PID) to a `.pid` file and starting the main process.
+All setup required for the process to run (that has not been done in the `pre-start` script) must be done at this time.
+Monit places a short timeout on the `.pid` file being written, so the work done in the `start` script should be focused on
 executing your process and getting it healthy quickly.
 
 **Note**: This script will likely run many times, so ensure that it is idempotent (that it can be run repeatedly without
@@ -91,7 +91,7 @@ The general workflow of a start script:
 2. Create a run directory to contain the pidfile in `/var/vcap/sys/run/<job name>`
    - Idempotency recommendation: Do not fail if the run directory already exists
 
-3. Change ownership permissions on the log and run directories to user vcap and group vcap
+3. Change ownership permissions on the `log/` and `run/` directories to user `vcap` and group `vcap`
 
 4. Run your process with `start-stop-daemon`, which will manage your process's pidfile, ensuring multiple instances
    of the process are not run simultaneously. A recommended usage of `start-stop-daemon` looks like this:
@@ -118,18 +118,18 @@ The general workflow of a start script:
 
 **Note**: The start script is executed as root. Do not assume you can only break your own process.
 
-**Note**: If your process cannot start quickly, consider moving long-running tasks to pre-start or post-start.
+**Note**: If your process cannot start quickly, consider moving long-running tasks to `pre-start` or `post-start`.
 
-**Note for Windows Releases**: The Windows BOSH Agent does not use monit and manages starting the script directly. If
-                               your pre-start and post-start scripts have been written following the guidance in this
-                               document, the Agent will be able to start your process correctly.
+**Note for Windows Releases**: The Windows BOSH Agent does not use Monit and manages starting the script directly. If
+your `pre-start` and `post-start` scripts have been written following the guidance in this document, the Windows BOSH
+Agent will be able to start your process correctly.
 
 ##### Logging
 
 Job logs should be put in the `/var/vcap/sys/log/<job>` directory. You can redirect the logs from your server (if
 they're output on `stdout` and `stderr`) by using standard redirection:
 
-```
+```bash
 exec ... \
   >> "/var/vcap/sys/log/<job>/<process>.out.log" \
   2>> "/var/vcap/sys/log/<job>/<process>.err.log"
@@ -137,7 +137,7 @@ exec ... \
 
 If your process takes log locations as parameters, use that instead:
 
-```
+```bash
 exec ... \
   --out-log-file "/var/vcap/sys/log/<job>/<process>.out.log" \
   --err-log-file "/var/vcap/sys/log/<job>/<process>.err.log"
@@ -146,9 +146,9 @@ For detail on forwarding logs to external locations, please see [Exporting Logs]
 
 #### Post-Start ([docs](https://bosh.io/docs/post-start/))
 
-Post-start is useful for custom health-checks to ensure you job has started correctly. For example, if your process
-starts quickly, but takes time to discover services or connect to its backend, you may wish to use post-start to query
-the readiness of your job to start handling requests. If a post-start script is provided, BOSH will not consider a job
+`post-start` is useful for custom health-checks to ensure you job has started correctly. For example, if your process
+starts quickly, but takes time to discover services or connect to its backend, you may wish to use `post-start` to query
+the readiness of your job to start handling requests. If a `post-start` script is provided, BOSH will not consider a job
 to be ready until it has exited successfully.
 
 #### Post-Deploy ([docs](https://bosh.io/docs/post-deploy/))
@@ -165,8 +165,8 @@ job becoming listed as unhealthy.
 
 Drain scripts are optional hooks into the BOSH job lifecycle that are run before stopping the job via Monit. They
 are typically used for services which must perform some work before being shut down, for example flushing a request
-queue or evacuating containers from a Diego cell. As a rule of thumb, if `monit stop`ping your job could cause dropped
-connections or a lack of availability, a drain script should be used to prevent this. Most commonly, your drain script
+queue or evacuating containers from a Diego cell. As a rule of thumb, if `monit stop`-ping your job could cause dropped
+connections or a lack of availability, a `drain` script should be used to prevent this. Most commonly, your `drain` script
 will send a request to a drain endpoint on your process and wait for it to return rather than implementing the drain
 behavior itself.
 
@@ -180,7 +180,7 @@ the [lame duck][lame-duck] pattern.
 [lame-duck]: https://landing.google.com/sre/book/chapters/load-balancing-datacenter.html#robust_approach_lame_duck
 
 Drain scripts have no timeout, so should take whatever time necessary to block on any draining work. One may, however,
-run the risk of writing a drain script that never finishes and blocks a deployment. A well-written drain script is
+run the risk of writing a `drain` script that never finishes and blocks a deployment. A well-written drain script is
 guaranteed to finish, such as by adding your own sensible timeout around draining work (e.g. 10 minutes).
 
 When your draining process has completed, your drain script should output a "0" to STDOUT to inform BOSH that draining
@@ -191,13 +191,13 @@ have any ideas, please [let us know][contact-us].
 
 #### Monit Stop
 
-The stop program in your job's `monit` file is executed after the drain script (if present) has finished running. It can
+The `stop program` in your job's `monit` file is executed after the `drain` script (if present) has finished running. It can
 also be run directly by an operator if they execute `monit stop <job>` on the machine. By default, there is a 30 second
 timeout on this script completing. Monit will assume scripts taking longer than this have failed. We do not recommend
 changing this value if you need more time. Instead, you should do all the work necessary in your `drain` script such
-that your service can shutdown quickly (where "quickly" generally means in under 10 seconds).
+that your service can shutdown quickly (where “quickly” generally means in under 10 seconds).
 
-If you're not using drain then we recommend that you send `SIGTERM` to your process which should cause it to start
+If you're not using `drain`, then we recommend that you send `SIGTERM` to your process, which should cause it to start
 shutting down. If your process shuts down at this point then you're good to go. If for some reason your process locks up
 or is unable to exit for some other reason then you should send `SIGKILL` before the timeout. If your language runtime
 supports dumping the stacks of all running threads on `SIGQUIT` (Go and Java do) then you can send that signal just
@@ -229,19 +229,19 @@ Refer to the stop script of the pararagon job for a more-complete example.
 If you're using drain to kill the process then your process may already be shut down by the time that `monit stop` is
 called. In this case we do not need to do anything further in the stop executable.
 
-**Note for Windows Releases**: The Windows BOSH Agent does not use monit and manages starting the script directly. If
-                               your pre-start and post-start scripts have been written following the guidance in this
-                               document, the Agent will be able to stop your process correctly.
+**Note for Windows Releases**: The Windows BOSH Agent does not use Monit and manages starting the script directly. If
+your `pre-start` and `post-start` scripts have been written following the guidance in this document, the Windows BOSH
+Agent will be able to stop your process correctly.
 
 ## Spec File Advice
 
 ### Properties
 
-The properties you include in your spec file create the product surface for your job from the perspective of the
+The properties you include in your `spec` file create the product surface for your job from the perspective of the
 operator component. Job properties can make it much easier or much harder to operate a deployment, so one should be
 mindful of the operator when making decisions about properties.
 
-- Properties should not have a "namespace" for the job itself (e.g. `my-job.port`, `my-job.hostname`), but should
+- Properties should not have a “namespace” for the job itself (e.g. `my-job.port`, `my-job.hostname`), but should
   only use namespace to create property groups that the job cares about (e.g. `database.*` and `blobstore.*`).
 - If a property does not need to be configured specially for every deployment and a reasonable default exists, it should
   be provided. This lets an operator have a terser deployment manifest, which is easier to generate, read, and modify.
@@ -262,7 +262,7 @@ and BOSH will provide that information automatically. When links are used correc
   jobs that need to communicate with it.
 
 If links are used whenever a job depends on configuration from another job, manifests can become much simpler and
-deployments can become more reliable. When authoring your release, all properties you include in your spec file should
+deployments can become more reliable. When authoring your release, all properties you include in your `spec` file should
 change the runtime behavior of your process and should not include IP addresses, domain names, credentials, or
 certificates of other jobs. If you are including these properties, they are candidates for links instead. If the job
 you depend on does not provide the information as a link, please consider submitting an issue or PR to the maintainer.
@@ -273,10 +273,10 @@ Sometimes it is necessary to allow operators to override individual properties w
 uses a link's IP information to find a dependent service, but a particular deployment may be using custom DNS for
 service discovery, your job template could prefer the DNS property over the link. That template could look like this:
 
-```
+```yaml
 <%
   server = nil
-  if_p("database_location") do |prop|>
+  if_p("database_location") do |prop|
     server = prop
   end.else do
     server = link("database").instances[0].address
@@ -290,7 +290,7 @@ server: <%= server %>
 
 ### ERB
 
-Any template in your job can use ERB (even the monit files!). While this is extremely powerful it can be very difficult
+Any template in your job can use ERB (even the `monit` files!). While this is extremely powerful it can be very difficult
 to understand and maintain complex templates. Therefore, we advise avoiding any ERB in your control scripts wherever
 possible. The control flow of starting and stopping your program should be deterministic and simple. All ERB should be
 relegated to static configuration files so that properties can be interpolated.
@@ -337,7 +337,7 @@ components.
 **Backwards Compatibility Warning**: If your release is currently responsible for forwarding logs off-system, by
 following this guide and removing that functionality, you are putting the onus for logging on deployment authors
 (e.g. [cf-deployment][cf-deployment] or your local friendly closed-source proprietary offering) to configure logging.
-If your release has traditionally done this, deployment authors may not know to update the deployment and logs could
+If your release has traditionally done this, deployment authors may not know how to update the deployment and logs could
 be lost. If you are removing this functionality, please coordinate appropriately with deployment authors and operators.
 
 [cf-deployment]: https://github.com/cloudfoundry/cf-deployment
@@ -355,7 +355,7 @@ approach include starting multiple processes for every line of logs, fairly subt
 security vulnerabilities. If your release has any code like the following, please remove it and follow the
 recommendations above:
 
-```
+```bash
 DO NOT USE THIS CODE
 
 exec > \
@@ -380,4 +380,4 @@ directory (but not before appending timestamps with `awk`).</sub>
 
 <!-- Global Links -->
 
-[contact-us]: https://github.com/cloudfoundry/exemplar-release/pulls
+[contact-us]: https://github.com/cloudfoundry/exemplar-release/issues
