@@ -62,10 +62,10 @@ our recommendations for the individual parts of the lifecycle.
 
 Pre-start scripts are run before BOSH hands off control to Monit, so will not necessarily run every time a job starts
 (e.g. if a VM is rebooted outside of BOSH's control). However, `pre-start` scripts will run at least once for every new
-release version that is deployed, and have _no timeout_ (in contrast to a `start` script). Therefore, `pre-start` scripts
-can best be used for performing lengthy set-up of persistent state that must be done for a new version of a release,
-such as database migrations. However, because the `pre-start` script does not necessarily run in every VM your job
-will run in, do not perform any work in temporary directories such as `/var/vcap/sys/run` (see [VM Configuration
+release version that is deployed, and have _no timeout_ (in contrast to a `start` script). Therefore, `pre-start`
+scripts can best be used for performing lengthy set-up of persistent state that must be done for a new version of a
+release, such as database migrations. However, because the `pre-start` script does not necessarily run in every VM your
+job will run in, do not perform any work in temporary directories such as `/var/vcap/sys/run` (see [VM Configuration
 Locations][vm-config-loc] for the list of temporary directories).
 
 [vm-config-loc]: https://bosh.io/docs/vm-config/
@@ -75,10 +75,10 @@ In general, a `pre-start` script should not be necessary and the start script sh
 
 #### Monit Start
 
-The `start` script has two main responsibilities: writing the process ID (PID) to a `.pid` file and starting the main process.
-All setup required for the process to run (that has not been done in the `pre-start` script) must be done at this time.
-Monit places a short timeout on the `.pid` file being written, so the work done in the `start` script should be focused on
-executing your process and getting it healthy quickly.
+The `start` script has two main responsibilities: writing the process ID (PID) to a `.pid` file and starting the main
+process. All setup required for the process to run (that has not been done in the `pre-start` script) must be done at
+this time. Monit places a short timeout on the `.pid` file being written, so the work done in the `start` script should
+be focused on executing your process and getting it healthy quickly.
 
 **Note**: This script will likely run many times, so ensure that it is idempotent (that it can be run repeatedly without
 causing the system to enter a bad state)
@@ -203,12 +203,12 @@ job becoming listed as unhealthy.
 
 #### Drain ([docs](https://bosh.io/docs/drain/))
 
-Drain scripts are optional hooks into the BOSH job lifecycle that are run before stopping the job via Monit. They
-are typically used for services which must perform some work before being shut down, for example flushing a request
-queue or evacuating containers from a Diego cell. As a rule of thumb, if `monit stop`-ping your job could cause dropped
-connections or a lack of availability, a `drain` script should be used to prevent this. Most commonly, your `drain` script
-will send a request to a drain endpoint on your process and wait for it to return rather than implementing the drain
-behavior itself.
+Drain scripts are optional hooks into the BOSH job lifecycle that are run before stopping the job via Monit. They are
+typically used for services which must perform some work before being shut down, for example flushing a request queue or
+evacuating containers from a Diego cell. As a rule of thumb, if `monit stop`-ping your job could cause dropped
+connections or a lack of availability, a `drain` script should be used to prevent this. Most commonly, your `drain`
+script will send a request to a drain endpoint on your process and wait for it to return rather than implementing the
+drain behavior itself.
 
 A concrete example is the [gorouter][gorouter], which has a configurable `drain_wait` parameter. When non-zero,
 gorouter's drain script will instruct gorouter to report itself as unhealthy to its load-balancer with the intent of
@@ -249,12 +249,12 @@ You can see two examples of such scripts that follow this best practice:
 
 #### Monit Stop
 
-The `stop program` in your job's `monit` file is executed after the `drain` script (if present) has finished running. It can
-also be run directly by an operator if they execute `monit stop <job>` on the machine (though operators should
-always consider running `bosh stop <instance-group>/<index>` instead of using `monit stop` directly). By default, there is a 30 second
-timeout on this script completing. Monit will assume scripts taking longer than this have failed. We do not recommend
-changing this value if you need more time. Instead, you should do all the work necessary in your `drain` script such
-that your service can shutdown quickly (where “quickly” generally means in under 10 seconds).
+The `stop program` in your job's `monit` file is executed after the `drain` script (if present) has finished running. It
+can also be run directly by an operator if they execute `monit stop <job>` on the machine (though operators should
+always consider running `bosh stop <instance-group>/<index>` instead of using `monit stop` directly). By default, there
+is a 30 second timeout on this script completing. Monit will assume scripts taking longer than this have failed. We do
+not recommend changing this value if you need more time. Instead, you should do all the work necessary in your `drain`
+script such that your service can shutdown quickly (where “quickly” generally means in under 10 seconds).
 
 If you're not using `drain`, then we recommend that you send `SIGTERM` to your process, which should cause it to start
 shutting down. If your process shuts down at this point then you're good to go. If for some reason your process locks up
@@ -373,10 +373,10 @@ server: <%= server.to_json %>
 
 ### ERB
 
-Any template in your job can use ERB (even the `monit` files!). While this is extremely powerful it can be very difficult
-to understand and maintain complex templates. Therefore, we advise avoiding any ERB in your control scripts wherever
-possible. The control flow of starting and stopping your program should be deterministic and simple. All ERB should be
-relegated to static configuration files so that properties can be interpolated.
+Any template in your job can use ERB (even the `monit` files!). While this is extremely powerful it can be very
+difficult to understand and maintain complex templates. Therefore, we advise avoiding any ERB in your control scripts
+wherever possible. The control flow of starting and stopping your program should be deterministic and simple. All ERB
+should be relegated to static configuration files so that properties can be interpolated.
 
 ### Encoding
 
