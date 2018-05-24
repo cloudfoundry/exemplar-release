@@ -1,18 +1,28 @@
 #!/usr/bin/env bash
 
-# If a command fails, exit immediately
-set -e
+# If a command fails, in a pipeline or not, exit immediately
+set -e -o pipefail
 
-export timeout=120
-export polling_frequency=1
+function prepend_datetime() {
+  awk -W interactive '{ system("echo -n [$(date +%FT%T%z)]"); print " " $0 }'
+}
 
-export max_attempts=$((timeout / polling_frequency))
-export attempts=0
+exec \
+    1> >(prepend_datetime >> /var/vcap/sys/log/paragon/post-start.out.log) \
+    2> >(prepend_datetime >> /var/vcap/sys/log/paragon/post-start.err.log)
+
+timeout=120
+polling_frequency=1
+
+max_attempts=$((timeout / polling_frequency))
+attempts=0
 while [[ "$max_attempts" -ge "$attempts" ]]; do
     set +e
     echo "attempt $attempts"
     curl -f --max-time 120 https://127.0.0.1:58074/healthcheck
     if [[ $? -eq 0 ]]; then
+        echo "post-start succeeded." \
+            "Paragon is healthy after $attempts of $polling_frequency seconds."
         exit 0
     fi
     set -e
@@ -22,4 +32,6 @@ while [[ "$max_attempts" -ge "$attempts" ]]; do
     sleep "$polling_frequency"
 done
 
+echo "post-start failed." \
+    "Paragon is still unhealthy after $timeout attemps of $polling_frequency seconds."
 exit 1
