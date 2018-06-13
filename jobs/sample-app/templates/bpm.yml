@@ -1,0 +1,9 @@
+---
+<% require "json" -%>
+processes:
+  - name: sample-app
+    executable: /var/vcap/packages/sample-app/bin/sample-app
+    args: []
+    env:
+      PORT: <%= p('port').to_json %>
+      CF_INSTANCE_INDEX: <%= spec.index.to_json %>
