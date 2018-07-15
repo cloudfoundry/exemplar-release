@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+set -eu -o pipefail
+
+echo '---
+backup_name: "custom-backup-name"
+backup_should_be_locked_before: []
+
+restore_name: "custom-backup-name"
+restore_should_be_locked_before: []
+'

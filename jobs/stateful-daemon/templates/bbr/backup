@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+set -eu -o pipefail
+
+cp -Rp /var/vcap/store/stateful-daemon/ "${BBR_ARTIFACT_DIRECTORY}"

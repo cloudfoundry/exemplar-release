@@ -1,0 +1,5 @@
+check process stateful-daemon
+  with pidfile /var/vcap/sys/run/bpm/stateful-daemon/stateful-daemon.pid
+  start program "/var/vcap/jobs/bpm/bin/bpm start stateful-daemon"
+  stop program "/var/vcap/jobs/bpm/bin/bpm stop stateful-daemon"
+  group vcap
