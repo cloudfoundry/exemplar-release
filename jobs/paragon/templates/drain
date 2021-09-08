@@ -4,7 +4,8 @@
 set -e -o pipefail
 
 function prepend_datetime() {
-  awk -W interactive '{ system("echo -n [$(date +%FT%T%z)]"); print " " $0 }'
+    awk -W "interactive" \
+        '{ system("echo -n [$(date +%FT%T%z)]"); print " " $0 }'
 }
 
 # Before redirecting stdout and stderr, copy the file descriptor for original
@@ -15,19 +16,20 @@ exec \
     1> >(prepend_datetime >> /var/vcap/sys/log/paragon/drain.stdout.log) \
     2> >(prepend_datetime >> /var/vcap/sys/log/paragon/drain.stderr.log)
 
-output_for_bosh() {
-    exit_code=$?
+function output_for_bosh() {
+    local exit_code=$?
 
-    if [ $exit_code -eq 0 ]; then
+    if [[ ${exit_code} -eq 0 ]]; then
         echo "paragon process is properly drained"
     else
         echo "drain failed"
     fi
 
-    echo $exit_code >&3
+    echo "${exit_code}" >&3
 }
 
-trap output_for_bosh EXIT
+trap "output_for_bosh" "EXIT"
 
 # blocks until drained, with a 10 minutes timeout
-curl -sf --max-time 600 -X POST https://127.0.0.1:6060/admin/drain
+curl --silent --fail --max-time "600" \
+    --request "POST" --url "https://127.0.0.1:6060/admin/drain"

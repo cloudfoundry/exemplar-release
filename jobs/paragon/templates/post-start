@@ -4,7 +4,7 @@
 set -e -o pipefail
 
 function prepend_datetime() {
-  awk -W interactive '{ system("echo -n [$(date +%FT%T%z)]"); print " " $0 }'
+    awk -W interactive '{ system("echo -n [$(date +%FT%T%z)]"); print " " $0 }'
 }
 
 exec \
