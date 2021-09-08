@@ -1,0 +1,8 @@
+---
+<% require "json" -%>
+processes:
+  - name: stateful-daemon
+    executable: /var/vcap/packages/stateful-daemon/bin/stateful-daemon
+    args: []
+    env: {}
+    persistent_disk: true
