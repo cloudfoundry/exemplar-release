@@ -11,8 +11,8 @@ function prepend_datetime() {
 # stdout where BOSH is expecting an integer, and only that.
 exec 3>&1
 exec \
-    1> >(prepend_datetime >> /var/vcap/sys/log/paragon/drain.out.log) \
-    2> >(prepend_datetime >> /var/vcap/sys/log/paragon/drain.err.log)
+    1> >(prepend_datetime >> /var/vcap/sys/log/stateful-daemon/drain.out.log) \
+    2> >(prepend_datetime >> /var/vcap/sys/log/stateful-daemon/drain.err.log)
 
 output_for_bosh() {
     exit_code=$?
