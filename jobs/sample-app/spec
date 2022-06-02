@@ -1,0 +1,21 @@
+---
+name: sample-app
+
+templates:
+  bpm.yml: config/bpm.yml
+
+packages:
+  - sample-app # not included here in this release
+
+provides:
+  - name: sample-app
+    type: web-app
+    properties:
+      - port
+
+properties:
+  port:
+    description: |
+      The TCP port on which the application is listening for incoming HTTP
+      requests.
+    default: 8080
