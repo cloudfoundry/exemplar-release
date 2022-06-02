@@ -1,0 +1,14 @@
+---
+name: stateful-daemon
+
+templates:
+  bpm.yml: config/bpm.yml
+  drain: bin/drain
+  bbr/backup: bin/bbr/backup
+  bbr/restore: bin/bbr/restore
+  bbr/metadata: bin/bbr/metadata
+
+packages:
+  - stateful-daemon # not included here in this release
+
+properties: {}
