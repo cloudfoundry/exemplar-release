@@ -212,8 +212,7 @@ configuration properties.
 
 #### Post-Deploy ([docs](https://bosh.io/docs/post-deploy/))
 
-The authors have never seen this used. It may be useful for checking the health of an entire deployment. If you find it
-useful, please [let us know][contact-us].
+`post-deploy` is useful for tasks that must occur once all instances of a deployment are started, such as checking the health of an entire deployment or enabling a feature after a successful upgrade.
 
 ### Stopping
 
