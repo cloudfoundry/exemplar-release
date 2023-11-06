@@ -3,6 +3,18 @@
 # If a command fails, in a pipeline or not, exit immediately
 set -e -o pipefail
 
+function prepend_datetime() {
+  awk -W interactive '{ system("echo -n [$(date +%FT%T%z)]"); print " " $0 }'
+}
+
+exec \
+    3>&1 \
+    4>&2 \
+    1> >(prepend_datetime >&3) \
+    2> >(prepend_datetime >&4)
+
+
+
 function enable_feature_post_clustering {
     echo "All instances started and clustered, enabling feature"
     curl -f --max-time 120 https://127.0.0.1:58074/enable-feature
