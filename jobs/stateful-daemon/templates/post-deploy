@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+function prepend_datetime() {
+  awk -W interactive '{ system("echo -n [$(date +%FT%T%z)]"); print " " $0 }'
+}
+
+exec \
+    3>&1 \
+    4>&2 \
+    1> >(prepend_datetime >&3) \
+    2> >(prepend_datetime >&4)
+
+readonly JOB_NAME=stateful-daemon
+readonly \
+    JOB_DIR=/var/vcap/jobs/${JOB_NAME}
+
+<% if spec.bootstrap -%>
+
+# Finish stateful-daemon's data migrations if necessary. This apprears only in
+# the post-deploy script of the 'bootstrap' node in the BOSH instance group.
+
+set +e
+"${JOB_DIR}/bin/stateful-daemon" migrations list --conf "${JOB_DIR}/config/stateful-daemon.conf"
+status_code=$?
+set -e
+
+if [[ ${status_code} -eq 4 ]]; then
+    echo "INFO: finishing stateful-daemon database migrations"
+	"${JOB_DIR}/bin/stateful-daemon" migrations finish --conf "${JOB_DIR}/config/stateful-daemon.conf"
+fi
+
+
+<% end # spec.bootstrap -%>

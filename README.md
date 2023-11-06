@@ -212,7 +212,9 @@ configuration properties.
 
 #### Post-Deploy ([docs](https://bosh.io/docs/post-deploy/))
 
-`post-deploy` is useful for tasks that must occur once all instances of a deployment are started, such as checking the health of an entire deployment or enabling a feature after a successful upgrade.
+`post-deploy` is useful for tasks that must occur once all instances of a deployment are started, such as checking the
+health of an entire deployment, enabling a feature after a successful upgrade, or finishing database migrations for an
+entire cluster.
 
 ### Stopping
 
@@ -228,11 +230,11 @@ connections or a lack of availability, a `drain` script should be used to preven
 script will send a request to a drain endpoint on your process and wait for it to return rather than implementing the
 drain behavior itself.
 
-A concrete example is the [gorouter][gorouter], which has a configurable [`drain_wait`][drain-wait] parameter. When non-zero,
-gorouter's drain script will instruct gorouter to report itself as unhealthy to its load-balancer with the intent of
-being removed from the balanced instance group before shutting down and rejecting requests. When `monit stop` is called,
-the router will already be receiving no connections, so will not drop connections when it is shut down quickly. This is
-the [lame duck][lame-duck] pattern.
+A concrete example is the [gorouter][gorouter], which has a configurable [`drain_wait`][drain-wait] parameter. When
+non-zero, gorouter's drain script will instruct gorouter to report itself as unhealthy to its load-balancer with the
+intent of being removed from the balanced instance group before shutting down and rejecting requests. When `monit stop`
+is called, the router will already be receiving no connections, so will not drop connections when it is shut down
+quickly. This is the [lame duck][lame-duck] pattern.
 
 [gorouter]: https://github.com/cloudfoundry/gorouter
 [drain-wait]: https://github.com/cloudfoundry/routing-release/blob/develop/jobs/gorouter/spec#L62-L67
