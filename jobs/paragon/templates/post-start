@@ -4,12 +4,12 @@
 set -e -o pipefail
 
 function prepend_datetime() {
-  awk -W interactive '{ system("echo -n [$(date +%FT%T%z)]"); print " " $0 }'
+    awk -W interactive '{ system("echo -n [$(date +%FT%T%z)]"); print " " $0 }'
 }
 
 exec \
-    1> >(prepend_datetime >> /var/vcap/sys/log/paragon/post-start.out.log) \
-    2> >(prepend_datetime >> /var/vcap/sys/log/paragon/post-start.err.log)
+    1> >(prepend_datetime >> /var/vcap/sys/log/paragon/post-start.stdout.log) \
+    2> >(prepend_datetime >> /var/vcap/sys/log/paragon/post-start.stderr.log)
 
 timeout=120
 polling_frequency=1
