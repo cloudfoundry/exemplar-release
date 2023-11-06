@@ -129,8 +129,8 @@ The general workflow of a start script:
      # Start the given process and redirect its logs
      --start \
      --exec /var/vcap/packages/paragon/bin/web \
-        >> "$LOG_DIR/web.out.log" \
-       2>> "$LOG_DIR/web.err.log"
+        >> "$LOG_DIR/web.stdout.log" \
+       2>> "$LOG_DIR/web.stderr.log"
    ```
 
    Refer to the start script of the pararagon job for a more-complete example.
@@ -150,16 +150,16 @@ they're output on `stdout` and `stderr`) by using standard redirection:
 
 ```bash
 exec ... \
-  >> "/var/vcap/sys/log/<job>/<process>.out.log" \
-  2>> "/var/vcap/sys/log/<job>/<process>.err.log"
+  >> "/var/vcap/sys/log/<job>/<process>.stdout.log" \
+  2>> "/var/vcap/sys/log/<job>/<process>.stderr.log"
 ```
 
 If your process takes log locations as parameters, use that instead:
 
 ```bash
 exec ... \
-  --out-log-file "/var/vcap/sys/log/<job>/<process>.out.log" \
-  --err-log-file "/var/vcap/sys/log/<job>/<process>.err.log"
+  --out-log-file "/var/vcap/sys/log/<job>/<process>.stdout.log" \
+  --err-log-file "/var/vcap/sys/log/<job>/<process>.stderr.log"
 ```
 
 What is important here, is that all log files _must_ end with the `.log` extention in order to be properly rotated by
@@ -177,8 +177,8 @@ been deployed for a long time, in order to distinguish old errors from recent er
 ```bash
 function start_logging() {
   exec \
-    > >(prepend_datetime >> /var/vcap/sys/log/<job>/<process>.out.log) \
-    2> >(prepend_datetime >> /var/vcap/sys/log/<job>/<process>.err.log)
+    > >(prepend_datetime >> /var/vcap/sys/log/<job>/<process>.stdout.log) \
+    2> >(prepend_datetime >> /var/vcap/sys/log/<job>/<process>.stderr.log)
 }
 
 function prepend_datetime() {
@@ -517,13 +517,13 @@ exec > \
   >(
     tee -a >(logger -p user.info -t vcap.$(basename $0).stdout) | \
       awk -W interactive '{ gsub(/\\n/, ""); system("echo -n [$(date +\"%Y-%m-%d %H:%M:%S%z\")]"); print " " $0 }' \
-      >> /var/vcap/sys/log/<job>/<process>.out.log
+      >> /var/vcap/sys/log/<job>/<process>.stdout.log
   )
 exec 2> \
   >(
     tee -a >(logger -p user.error -t vcap.$(basename $0).stderr) | \
       awk -W interactive '{ gsub(/\\n/, ""); system("echo -n [$(date +\"%Y-%m-%d %H:%M:%S%z\")]"); print " " $0 }' \
-      >> /var/vcap/sys/log/<job>/<process>.err.log
+      >> /var/vcap/sys/log/<job>/<process>.stderr.log
   )
 
 DO NOT USE THIS CODE

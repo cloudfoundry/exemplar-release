@@ -22,5 +22,5 @@ chown -R vcap:vcap "$LOG_DIR" "$RUN_DIR"
   --chuid vcap:vcap \
   --start \
   --exec /var/vcap/packages/paragon/bin/web \
-   >> "$LOG_DIR/web.out.log" \
-  2>> "$LOG_DIR/web.err.log"
+   >> "$LOG_DIR/web.stdout.log" \
+  2>> "$LOG_DIR/web.stderr.log"
