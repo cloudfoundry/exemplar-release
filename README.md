@@ -64,7 +64,7 @@ management to BPM. That said, BPM doesn't provide an answer to all use cases yet
 scripts are still necessary for the use cases documented below.
 
 One note about BPM `pre_start` hooks: contrarily to BOSH `pre-start`, BPM `pre_start` scripts are run at every
-`monit start` or `monit stop`, i.e. even when the BOSH instance gets back up after being evicted by the underlying Cloud
+`monit start`, i.e. even when the BOSH instance gets back up after being evicted by the underlying Cloud
 infrastructure. Actually, you should put in your BPM `pre_start` what you would have put in your `start` script before
 `exec`-ing your process.
 
