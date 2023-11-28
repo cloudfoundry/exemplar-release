@@ -34,6 +34,9 @@ recommendations to their unique circumstances.
 - [Exporting Logs](#exporting-logs)
   * [Metron Agent](#metron-agent)
   * [The Ol' `tee` and `logger` Approach](#the-ol-tee-and-logger-approach)
+- [Bosh DNS](#bosh-dns)
+  * [Aliases](#aliases)
+  * [Readiness with `bin/dns/healthy`](#readiness-with-bin-dns-healthy)
 - [Backup and Restore features](#backup-and-restore-features)
 
 <!-- tocstop -->
@@ -567,6 +570,47 @@ DO NOT USE THIS CODE
 sending them to a sub-shell that calls `tee`. `tee` splits the output to 1) syslog via `logger` and 2) the BOSH log
 directory (but not before appending timestamps with `awk`).</sub>
 
+
+## Bosh DNS
+
+Bosh DNS is an important feature in Bosh. It basically brings consistent cloud-agnostic internal load-balancer features
+for free.
+
+Bosh DNS is also particularily powerful for implementing cloud-agnostic split-DNS features. Internally, Bosh DNS can
+mask public DNS names, and return private IP addresses instead. With this, the cluster can use public DNS names and
+still get the traffic routed internally. Without it, the traffic would exit the cluster and immediately re-enter it,
+resulting in unnecessary network hops.
+
+### Aliases
+
+Release jobs can define their own DNS aliases in a `dns/aliases.json` file. Here we
+[demonstrate](jobs/stateful-daemon/templates/dns/aliases.json.erb) how to write such file. Indeed, when referring to
+default Bopsh DNS names, you'll need to get the network name from Bosh Cloud Config, and there is a trick for this with
+the `.methods(false)` helper on the `.networks` OpenStruct.
+
+### Readiness with `bin/dns/healthy`
+
+The Bosh `dns/health` script is actually misnamed, as it is actually a “_readiness_” check script. Indeed, when a
+`bin/dns/healthy` script exits with non-zero (error) status, then the instance is taken out of DNS aliases. When you see
+DNS aliases as cheap load-balancers, then it means that you stop routing traffic to the job. This is precisely the
+concept of a “readiness” check.
+
+Inside a `bin/dns/healthy` script, you can do whatever check you need to. Run binaries, check open TCP ports or run
+healthcheck HTTP(S) queries.
+
+Particularily interesting is the way you can coordinate job draining in `pre-stop` with `dns/healthy` for properly
+draining connections to a network daemon that is about to shut down. Indeed, the `pre-stop` can “inform” `dns/healthy`
+that no more traffic should be routed to the daemon, creating a specific file for example. Then, the `dns/healthy`
+script can react and return non-zero exit status, resulting in the IP being removed from the DNS query results, and no
+more new connection sent to the daemon.
+
+If we detail a bit, the `pre-stop` starts draining connections. So, it ensures that Bosh DNS doesn't route any new
+connection to it writing a file like `/var/vcap/data/<job-name>/DRAINING`. The `dns/healthy` script detects this file,
+and exits unconditionally with a status of `1` in order to report the job as non-ready.
+
+See [this basic exemple][gk_kong_dns_healthy] from the Kong Bosh Release.
+
+[gk_kong_dns_healthy]: https://github.com/gstackio/gk-kong-boshrelease/blob/master/jobs/kong/templates/bin/dns/healthy
 
 ## Backup and Restore features
 

@@ -1,0 +1,24 @@
+<%
+    require "json"
+
+    instance_group = spec.name
+    network        = spec.networks.methods(false).find { |net_name|
+                            # Pick the network that has the default gateway
+                            default_for = spec.networks[net_name].default
+                            !default_for.nil? && default_for.include?("gateway")
+                        }
+    deployment     = spec.deployment
+    root_tld       = spec.dns_domain_name
+
+    aliases = {
+        # This placeholder alias only works for instance UUID
+        "_.stateful-daemon.techno-name.internal" => [
+            "_.#{instance_group}.#{network}.#{deployment}.#{root_tld}"
+        ],
+        # We create our own, based on human-friendly index
+        "storage-#{spec.index}.stateful-daemon.techno-name.internal": [
+            "#{spec.id}.#{instance_group}.#{network}.#{deployment}.#{root_tld}"
+        ]
+    }
+-%>
+<%= JSON.pretty_generate(aliases) -%>
