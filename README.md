@@ -18,8 +18,10 @@ recommendations to their unique circumstances.
     + [Post-Start](#post-start-docs)
     + [Post-Deploy](#post-deploy-docs)
   * [Stopping](#stopping)
+    + [Pre-stop](#pre-stop-docs)
     + [Drain](#drain-docs)
     + [Monit Stop](#monit-stop)
+    + [Post-stop](#post-stop-docs)
 - [Advice for authoring `spec` files](#advice-for-authoring-spec-files)
   * [Properties](#properties)
   * [Links](#links-docs)
@@ -218,17 +220,37 @@ entire cluster.
 
 ### Stopping
 
-Job is unmonitored before any stop scripts can run, so you can safely exit in either `drain` or `monit stop` without the
-job becoming listed as unhealthy.
+Job is unmonitored before any stop scripts can run, so you can safely exit in either `pre-stop`, `drain` or `monit stop`
+without the job becoming listed as unhealthy.
+
+#### Pre-Stop ([docs][pre_stop])
+
+The feature for `pre-stop` hook scripts has been released [in April 2019][bosh_v269]. The `pre-stop` script runs right
+before `drain`, with no timeout, and is exposed more information to help release authors take proper decision about
+future state of the bosh instance, whether it is going away temporarily of permanently.
+
+When `pre-stop` scripts are executed, daemon processes are no more monitored by Monit, so `pre-stop` is the proper place
+for draining client connections, and should be favored over using the `drain` script, that abides to legacy complex
+rules (related to “static” or “dynamic” draining modes, that should be avoided).
+
+The tricks in `drain` scripts based on `BOSH_JOB_NEXT_STATE` (see below) should be abandonned in favor of the newer
+`BOSH_VM_NEXT_STATE`, `BOSH_INSTANCE_NEXT_STATE` and `BOSH_DEPLOYMENT_NEXT_STATE` environment variables, that are now
+exposed to `pre-stop` scripts. See the documentation for more details
+
+[bosh_v269]: https://github.com/cloudfoundry/bosh/releases/tag/v269.0.0
+[pre_stop]: https://bosh.io/docs/pre-stop/
 
 #### Drain ([docs](https://bosh.io/docs/drain/))
 
-Drain scripts are optional hooks into the BOSH job lifecycle that are run before stopping the job via Monit. They are
-typically used for services which must perform some work before being shut down, for example flushing a request queue or
-evacuating containers from a Diego cell. As a rule of thumb, if `monit stop`-ping your job could cause dropped
-connections or a lack of availability, a `drain` script should be used to prevent this. Most commonly, your `drain`
-script will send a request to a drain endpoint on your process and wait for it to return rather than implementing the
-drain behavior itself.
+Drain scripts are the legacy hooks into the BOSH job lifecycle that are run before stopping the job via Monit. They've
+typically been used for services which must perform some work before being shut down, for example flushing a request
+queue or evacuating containers from a Diego cell. Now such things should be implemented in the newer `pre-stop` script.
+From this point on, and until the end of this section, everything that is said about `drain` should be ported to
+`pre-stop` instead.
+
+As a rule of thumb, if `monit stop`-ping your job could cause dropped connections or a lack of availability, a `drain`
+script should be used to prevent this. Most commonly, your `drain` script will send a request to a drain endpoint on
+your process and wait for it to return rather than implementing the drain behavior itself.
 
 A concrete example is the [gorouter][gorouter], which has a configurable [`drain_wait`][drain-wait] parameter. When
 non-zero, gorouter's drain script will instruct gorouter to report itself as unhealthy to its load-balancer with the
@@ -312,6 +334,17 @@ called. In this case we do not need to do anything further in the stop executabl
 **Note for Windows Releases**: The Windows BOSH Agent does not use Monit and manages starting the script directly. If
 your `pre-start` and `post-start` scripts have been written following the guidance in this document, the Windows BOSH
 Agent will be able to stop your process correctly.
+
+#### Post-Stop ([docs](https://bosh.io/docs/post-stop/))
+
+The feature for `post-stop` hook scripts has been released [in March 2018][bosh_v265]. When `post-stop` is run, the
+Monit process is gone. `post-stop` may possibly cleanup some data before the VM is shut down. `post-stop` is not exposed
+the same information as `pre-stop` for taking decisionsuppon permanent deletion of the VM.
+
+We haven't see so far any use-case that requires running code in the `post-stop` script specifically, but we'd lov to
+hear your feedback and get suggestions/contributions in PRs.
+
+[bosh_v265]: https://github.com/cloudfoundry/bosh/releases/tag/v265.1.0
 
 ## Advice for authoring `spec` files
 
