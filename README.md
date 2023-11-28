@@ -27,6 +27,7 @@ recommendations to their unique circumstances.
   * [Links](#links-docs)
 - [Template Advice](#template-advice)
   * [ERB](#erb)
+    + [Encoding](#encoding)
     + [Testing](#testing)
   * [bash](#bash)
 - [Monit Advice](#monit-advice)
@@ -432,7 +433,7 @@ difficult to understand and maintain complex templates. Therefore, we advise avo
 wherever possible. The control flow of starting and stopping your program should be deterministic and simple. All ERB
 should be relegated to static configuration files so that properties can be interpolated.
 
-### Encoding
+#### Encoding
 
 When you inject configuration properties with the ERB syntax in shell scripts or configuration files, you should take
 great care for properly encoding special caracters that are meaningful to the target syntax. Failing at doing so could
